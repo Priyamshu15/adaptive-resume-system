@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Resume Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="bg-shape shape-1" aria-hidden="true"></div>
+    <div class="bg-shape shape-2" aria-hidden="true"></div>
+    <div class="bg-shape shape-3" aria-hidden="true"></div>
+
+    <div class="a11y-bar">
+        <button id="zkp-toggle" class="btn-a11y"><i class="fa-solid fa-user-secret"></i> ZKP Privacy Mode</button>
+        <button id="high-contrast-toggle" class="btn-a11y" title="High Contrast Mode"><i class="fa-solid fa-circle-half-stroke"></i></button>
+    </div>
+
+    <div class="container">
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <i class="fa-solid fa-brain"></i><h2>ARIS</h2>
+            </div>
+            
+            <div class="zkp-target profile-card mt-1">
+                <h4><i class="fa-solid fa-user"></i> Candidate Profile</h4>
+                <p><strong id="cand-name">Pending...</strong></p>
+                <p id="cand-email">Upload resume to view</p>
+                <p id="cand-phone"></p>
+            </div>
+
+            <div class="trending-section mt-2">
+                <h3><i class="fa-solid fa-fire"></i> Trending Skills</h3>
+                <ul id="trending-list" class="trending-list"><div class="loader-small"></div></ul>
+            </div>
+            
+            <div class="dna-section mt-2" id="dna-section" style="display:none;">
+                <h3><i class="fa-solid fa-dna"></i> Corporate DNA Match</h3>
+                <select id="company-select" class="mt-1">
+                    <option value="" disabled selected>Target Company...</option>
+                    {% for comp in companies %}
+                    <option value="{{ comp }}">{{ comp }}</option>
+                    {% endfor %}
+                </select>
+                <div id="dna-feedback" class="dna-feedback mt-1"></div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="header zkp-target">
+                <h1 id="main-title">Adaptive Resume <span class="gradient-text">Intelligence</span></h1>
+                <p class="subtitle">Enterprise Skill Gap Analysis & AI Career Coach.</p>
+            </header>
+
+            <section class="upload-section glass-panel" id="upload-panel">
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="role-select">Target Job Role</label>
+                        <select id="role-select" name="role" required>
+                            <option value="" disabled selected>Select your target role...</option>
+                            {% for role in roles %}
+                            <option value="{{ role }}">{{ role }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="upload-dropzone" id="dropzone">
+                        <i class="fa-solid fa-cloud-arrow-up drop-icon"></i>
+                        <p>Drag & Drop your resume or <strong>Browse</strong></p>
+                        <input type="file" id="resume-upload" name="resume" accept=".pdf,.docx" required hidden>
+                    </div>
+                    <div id="file-name-display" class="file-name-display"></div>
+                    <button type="submit" class="btn-primary" id="analyze-btn">Initiate Enterprise Analysis <i class="fa-solid fa-wand-magic-sparkles"></i></button>
+                </form>
+                <div class="loading-overlay" id="loading-overlay" style="display: none;">
+                    <div class="spinner"></div><p>AI is generating predictive forecasts...</p>
+                </div>
+            </section>
+
+            <section class="results-section" id="results-section" style="display: none;">
+                <div class="results-header">
+                    <h2>Report: <span id="res-role" class="gradient-text zkp-target"></span></h2>
+                    <div class="action-buttons">
+                        <button class="btn-secondary" id="ats-score-btn"><i class="fa-solid fa-calculator"></i> Quick ATS Score</button>
+                        <button class="btn-secondary" id="ats-btn"><i class="fa-solid fa-x-ray"></i> ATS X-Ray</button>
+                        <button class="btn-secondary" id="interview-btn"><i class="fa-solid fa-microchip"></i> Biometric Auth Engine</button>
+                        <button class="btn-secondary" id="reset-btn"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                    </div>
+                </div>
+
+                <div class="enterprise-score-container glass-panel mt-2 mb-2" id="pdf-export-area">
+                    <div class="score-circle" id="score-circle">
+                        <div class="score-inner">
+                            <span id="master-score">0</span><span class="percent">%</span>
+                        </div>
+                    </div>
+                    <div class="score-details">
+                        <h3>Master Enterprise Score</h3>
+                        <p>Computed via deep algorithmic synthesis of your skill mapping and impact metrics.</p>
+                        <button class="btn-primary mt-1" id="export-pdf-btn" style="width:auto;"><i class="fa-solid fa-file-pdf"></i> Export Audit PDF</button>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid">
+                    <!-- Enterprise Radar Chart -->
+                    <div class="glass-panel radar-card">
+                        <h3>Skill Mapping Matrix</h3>
+                        <div class="chart-container-radar">
+                            <canvas id="radarChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-panel skills-card">
+                        <div class="skills-box found">
+                            <h3><i class="fa-solid fa-check-circle"></i> Skills Verified</h3>
+                            <div class="tags" id="found-skills-tags"></div>
+                        </div>
+                        <div class="skills-box missing">
+                            <h3><i class="fa-solid fa-circle-exclamation"></i> Skills Gap</h3>
+                            <div class="tags" id="missing-skills-tags"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel impact-card mt-2">
+                    <h3><i class="fa-solid fa-bullseye"></i> Quantifiable Impact Score</h3>
+                    <div class="progress-bar-container mt-1">
+                        <div class="progress-bar" id="impact-progress-bar" style="width: 0%;">0%</div>
+                    </div>
+                    <p class="file-hint text-center mt-1">Percentage of your bullet points containing hard metrics.</p>
+                    
+                    <div class="metric-grid unified-insights mt-1">
+                        <div class="metric-box unified-box" id="unified-insights-box">
+                            <h4><i class="fa-solid fa-layer-group"></i> Role Alignment & Strategic Growth</h4>
+                            <div class="insights-content">
+                                <div class="insight-section">
+                                    <h5 class="insight-title success"><i class="fa-solid fa-check-double"></i> Validated Achievements</h5>
+                                    <ul id="strong-list" class="insight-list"></ul>
+                                </div>
+                                <div class="insight-section mt-1">
+                                    <h5 class="insight-title warning"><i class="fa-solid fa-bullseye"></i> Strategic Growth Directives</h5>
+                                    <ul id="weak-list" class="insight-list"></ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid mt-2">
+                    <div class="glass-panel decay-card">
+                        <h3><i class="fa-solid fa-chart-line-down"></i> Predictive Career Decay</h3>
+                        <div class="chart-container-line" style="height:200px;">
+                            <canvas id="decayChart"></canvas>
+                        </div>
+                        <p id="decay-text" class="file-hint text-center mt-1"></p>
+                    </div>
+
+                    <div class="glass-panel salary-card">
+                        <h3><i class="fa-solid fa-money-bill-trend-up"></i> Salary & Market Impact</h3>
+                        <div class="salary-display">
+                            <span class="salary-bump">+$<span id="salary-value">0</span></span>
+                            <p>Estimated annual salary increase if gaps are filled.</p>
+                        </div>
+                        <button class="btn-primary mt-1" id="github-btn"><i class="fa-brands fa-github"></i> Connect GitHub</button>
+                    </div>
+                </div>
+                
+                <div class="glass-panel roadmap-section mt-2">
+                    <div class="roadmap-header-flex">
+                        <h3><i class="fa-solid fa-user-ninja"></i> Stealth Learning Sandboxes & Roadmaps</h3>
+                        <button class="btn-a11y" id="tts-btn"><i class="fa-solid fa-volume-high"></i> Listen</button>
+                    </div>
+                    <div class="roadmap-accordion" id="roadmap-container"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="ats-modal" class="modal">
+        <div class="modal-content glass-panel">
+            <span class="close-modal" id="close-ats">&times;</span>
+            <h2><i class="fa-solid fa-x-ray"></i> ATS Parsed Text View</h2>
+            <pre id="raw-text-display"></pre>
+        </div>
+    </div>
+
+    <div id="interview-modal" class="modal">
+        <div class="modal-content glass-panel biometric-modal-content">
+            <span class="close-modal" id="close-interview">&times;</span>
+            <h2><i class="fa-solid fa-microchip"></i> Multimodal Biometric & Cognitive Authenticity Engine</h2>
+            <div class="biometric-container mt-1">
+                <div class="video-wrapper">
+                    <video id="webcam-feed" autoplay muted playsinline></video>
+                    <div class="face-tracking-box" id="face-tracking-box">
+                        <div class="corner top-left"></div><div class="corner top-right"></div>
+                        <div class="corner bottom-left"></div><div class="corner bottom-right"></div>
+                    </div>
+                    <div class="scanning-overlay" id="scanning-overlay">
+                        <div class="scan-line"></div>
+                        <p>Calibrating Sensors...</p>
+                    </div>
+                    <div class="camera-error" id="camera-error" style="display:none;">
+                        <i class="fa-solid fa-video-slash"></i> Camera Unavailable
+                    </div>
+                </div>
+                <div class="interview-q-list" id="interview-questions"></div>
+            </div>
+            
+            <div class="cognitive-dashboard mt-1 glass-panel">
+                <div class="speech-controls">
+                    <button class="btn-primary" id="start-record-btn"><i class="fa-solid fa-microphone"></i> Start Answering</button>
+                    <button class="btn-primary" id="stop-record-btn" style="display:none; background: var(--danger);"><i class="fa-solid fa-stop"></i> Stop & Analyze</button>
+                </div>
+                <div class="transcription-box mt-1" id="transcription-box">
+                    <em style="color:var(--text-muted);">Awaiting speech input...</em>
+                </div>
+                <div class="cognitive-metrics mt-1" style="display:none;" id="cognitive-metrics">
+                    <div class="metric-pill"><span>Speech Rate:</span> <strong id="metric-wpm">--</strong> <small>WPM</small></div>
+                    <div class="metric-pill"><span>Hesitations:</span> <strong id="metric-pauses">--</strong></div>
+                    <div class="metric-pill"><span>Authenticity:</span> <strong id="metric-auth" class="gradient-text">--</strong></div>
+                </div>
+            </div>
+            
+            <button class="btn-secondary mt-2" id="next-question-btn" style="width:100%; justify-content:center;">Next Question <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+    <!-- Chatbot Widget -->
+    <div class="chatbot-widget" id="chatbot-widget">
+        <div class="chatbot-header" id="chatbot-toggle">
+            <span><i class="fa-solid fa-robot"></i> Context-Aware AI Coach</span>
+            <i class="fa-solid fa-chevron-up" id="chatbot-icon"></i>
+        </div>
+        <div class="chatbot-body" id="chatbot-body" style="display: none;">
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-message ai">Hi! I have fully analyzed your resume. Ask me anything about it!</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Ask about your resume...">
+                <button id="chat-send"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Stealth Learning Sandbox -->
+    <div id="sandbox-modal" class="modal" style="display:none; position:fixed; z-index:2000; left:0; top:0; width:100%; height:100%; background-color:rgba(0,0,0,0.8);">
+        <div class="modal-content glass-panel" style="width: 90%; max-width: 1200px; height: 85vh; display: flex; flex-direction: column; margin: 5% auto; padding: 20px; border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="color:var(--primary); margin:0;"><i class="fa-solid fa-terminal"></i> Stealth Learning Sandbox</h2>
+                <button class="btn-primary" style="width:auto; padding: 0.3rem 1rem;" onclick="document.getElementById('sandbox-modal').style.display='none'"><i class="fa-solid fa-times"></i> Close</button>
+            </div>
+            <iframe id="sandbox-iframe" src="" style="width: 100%; flex: 1; border: none; border-radius: 8px; background: #fff;"></iframe>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
